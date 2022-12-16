@@ -1,6 +1,7 @@
 'use strict';
-
+const fs = require('fs');
 const validator = require('validator');
+const filetools = require("./filetools");
 
 const questionProvince = {
     text: 'Avy any @ province aiza ianao ?',
@@ -54,7 +55,16 @@ const questionBV = {
     ]
 };
 
+const otherProof = {
+    text: 'Mbola misy sary hafa ?',
+    buttons: [
+        { type: 'postback', title: 'ENY', payload: 'ENY' },
+        { type: 'postback', title: 'TSIA', payload: 'TSIA' }
+    ]
+};
+
 const askName = (convo) => {
+	
 	convo.ask(`Iza no anaranao feno ?`, (payload, convo) => {
 		const text = payload.message.text;
 		convo.set('fullname', text);
@@ -174,6 +184,60 @@ const askCandidat = (convo,i) => {
 		
 };
 
+
+const askProof = (convo) => {
+	convo.ask("Alefaso ny profofo", (payload, convo) => {
+		payload.message.attachments.forEach(element => {
+			console.log(element.payload.url);
+			var userId = convo.get('user').id;
+			var cpt = convo.get("prof_cpt");
+			cpt++;
+			convo.set("prof_cpt",cpt);
+			filetools.download(element.payload.url, './upload/'+userId+'/prf_'+cpt+'.png', function(){
+				console.log('done');
+			});
+		});
+		convo.ask(otherProof,(payload,convo)=>{
+			const text = payload.postback.payload;
+			if(text =="ENY"){
+				askProof(convo);
+			}
+			else{
+				convo.say("VOATAHIRY NY VOKATRA AVY AMINAY");
+				convo.say("MANKASITRAKA ANAO IZAHAY !!!");
+				convo.say("Mbola afaka mandefa vokatra hafa ianao amin'ny manaraka");
+				convo.say("MISAOTRA TOMPOKO !!!");
+				convo.end();
+			}
+		})
+	});
+	
+};
+
+
+
+const askValidation = (convo,resultat) => {
+
+	var questionValidation = {
+		text: resultat,
+		buttons: [
+			{ type: 'postback', title: 'EKENA', payload: 'EKENA' },
+			{ type: 'postback', title: 'AVERINA', payload: 'AVERINA' }
+		]
+	};
+
+	convo.ask(questionValidation, (payload, convo) => {
+		const text = payload.postback.payload;
+		if(text =="EKENA"){
+			convo.say("Mila mandefa sary ianao ho porofo : tablilao sy PV");
+			askProof(convo);
+		}
+		else{
+			askName(convo);
+		}
+	});	
+}
+
 const sendSummary = (convo) => {
 	console.log(convo);
 	var resultat = "IRETO NY VOKATRA AVY AMINAO :"; 
@@ -196,30 +260,24 @@ const sendSummary = (convo) => {
 		var key = 'candidat'+i;
 		resultat = resultat+ " \n- "+key+" : "+ convo.get(key) ;
 	}	
-	
-	var askValidation = {
-		text: resultat,
-		buttons: [
-			{ type: 'postback', title: 'EKENA', payload: 'EKENA' },
-			{ type: 'postback', title: 'AVERINA', payload: 'AVERINA' }
-		]
-	};
-
-	convo.ask(askValidation, (payload, convo) => {
-		const text = payload.postback.payload;
-		if(text =="EKENA"){
-			convo.say("VOATAHIRY NY VOKATRA, MISAOTRA !!!");
-			convo.end();
-		}
-		else{
-			askName(convo);
-		}
-		
-	});		
- 
-  
+	askValidation(convo,resultat);
 };
 
-exports.startEnquete = (convo) => {
-	askName(convo);
+exports.startEnquete = (convo,chat) => {
+	chat.getUserProfile().then((user) => {
+		convo.set('user',user);
+		convo.set("prof_cpt",0);
+		fs.mkdir(`./upload/${user.id}/`, (err) => {
+			if (err) {
+				console.error(err);
+			} else {
+				console.log('Folder created successfully!');
+				filetools.download(user.profile_pic, `./upload/${user.id}/profil.png`, function(){
+					console.log('done');
+				});
+			}
+			askName(convo);
+			//askProof(convo);
+		});
+	  });
 };

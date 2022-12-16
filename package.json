@@ -21,7 +21,9 @@
   "homepage": "https://github.com/ratife/safidybot#readme",
   "dependencies": {
     "bootbot": "^1.1.0",
+    "fs": "^0.0.1-security",
     "mysql": "^2.18.1",
+    "request": "^2.88.2",
     "validator": "^13.7.0"
   }
 }
